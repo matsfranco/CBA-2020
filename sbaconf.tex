@@ -274,14 +274,71 @@ No âmbito de software, existem várias formas de implementar visão computacion
 
 
 \subsection{Aprendizado por Reforço (RL) e Q-learning}
+\emph{Reinforcement Learning} (RL), se trata de um método de \emph{Machine Learning} (ML), que permite ao agente descobrir, sem prévio conhecimento do ambiente, qual a melhor ação a ser tomada de modo a maximizar a recompensa recebida após fazer uma determinada escolha. Este paradigma é diferente, por exemplo, do Aprendizado Supervisionado, que conta com um supervisor externo \cite{intro_to_rl,rl_rob_survey,ql_pid_robotics,ql_model}.
+
+O RL está intimamente relacionado com a Teoria Clássica do Controle Ótimo, pois ambos são utilizados com o propósito de otimizar o ajuste de um conjunto de parâmetros, além do fato de que definem um sistema como um conjunto de estados, controladores e modelos que descrevem as transições entre estados. Apesar de fornecer resultados contundentes, o Controle Ótimo frequentemente apresenta problemas relacionados ao modelo utilizado e à aproximações computacionais. O RL é construído diretamente a partir da avaliação das ações executadas e das recompensas estimadas, podendo ser utilizado inclusive em casos que o modelo matemático que representa o sistema é analiticamente intratável \cite{rl_rob_survey}. 
+
+A utilização do RL na robótica possui algumas características distintas das outras aplicações, como o fato de ser praticamente impossível assumir que a observação do estado do agente é absoluta e livre de ruídos, uma vez que é obtida por sensores, tornando necessário o uso de filtros ou outros recursos. Outro fato é que experiências reais são mais difíceis de ser reproduzidas do que as virtuais e não podem ser substituídas apenas por simulações, uma vez que pequenas discrepâncias entre o modelo simulado e o real podem fazer com que o sistema real se comporte de uma forma completamente diferente do simulado \cite{rl_rob_survey}.
+
+\begin{itemize}
+\item[•]\textbf{Política}, ou em inglês \textit{Policy}, que define o modelo de comportamento do agente. É o elemento que estabelece o vínculo entre um dado estado e a ação executada pelo agente. Em geral se trata de um método estocástico \cite{rl_rob_survey};
+\item[•]\textbf{Sinal de Recompensa}, ou em inglês \textit{Reward Signal}, que é utilizado para direcionar as escolhas feitas pelo algoritmo. A cada iteração, uma recompensa é associada à ação tomada pelo agente, cujo o objetivo é maximizar a recompensa total ao longo das iterações. O Sinal de Recompensa também é uma das principais fontes de alterações na política: quando ações ruins são tomadas, a política de escolha é modificada a fim de evitar que a escolha seja feita novamente \cite{rl_rob_survey}; 
+\item[•]\textbf{Função de Valor}, ou en inglês \textit{Value Function}, que armazena o total de recompensas acumuladas pelos estados ao longo das iterações. É o que determina as boas escolhas no longo prazo, sendo modificada a cada iteração de acordo com os valores obtidos pelo Sinal de Recompensa \cite{rl_rob_survey};
+\item[•]\textbf{Modelo do Ambiente}, ou em inglês \textit{Environment Model}, que se trata de um modelo que permite inferir como o ambiente irá se comportar a partir de um estado e uma ação. Existem alguns métodos que utilizam modelos (\emph{model-based}) e outros que são basicamente tentativa e erro, não utilizando nenhum modelo de ambiente (\emph{model-free methods}) \cite{rl_rob_survey};
+\end{itemize}
+
+O RL pode ser matematicamente formalizado utilizando o problema chamado \emph{Finite Markov Decision Process} (MDP), do inglês, Processo de Decisão Finito de Markov, que é uma formalização clássica de problemas de tomada de decisão sequencial onde a ação não influencia apenas as recompensas imediatas, mas também as situações, estados e recompensas futuras, onde a função de valor é estimada com base na ação e no estado atual \cite{ql_model,markov_tut}. Continuamente o agente seleciona ações e o ambiente responde às ações por meio de novas situações e dando origem às recompensas, que são valores numéricos os quais o agente almeja maximizar ao longo do tempo através das escolhas de ações. Este processo de interação encontra-se descrito na Figura~\ref{fig:markov_proc} \cite{intro_to_rl}.
+
+\begin{figure}
+\begin{center}
+\includegraphics[scale=0.8]{Figuras/markov_proc.png}
+\caption{Interação entre agente e ambiente em um MDP.}
+\label{fig:markov_proc}
+\end{center}
+\end{figure}
 
 
 \section{Desenvolvimento}
+\subsection{Requisitos de Projeto}
+Inicialmente foi estabelecido um conjunto de vinte requisitos de projeto especificando as funcionalidades mínimas que o robô deveria possuir para ser utilizado neste estudo. Os requisitos foram separados em grupos (Mecânica, Controle, Telemetria e Eletrônica) e implementados de forma incremental.
 
+\subsection{Modelagem do Chassi}
+A partir dos requisitos mecânicos, um chassi do tipo \emph{Differencial Drive} foi desenvolvido utilizando componentes comerciais e expandindo suas funcionalidades utilizando modelagem e impressão 3D. Dois motores de corrente contínua equipados com encoders ópticos foram utilizados para tracionar as rodas de forma independente com seus respectivos controladores PID de velocidade angular.
 
-\section{Resultadoos}
+\begin{figure}
+\begin{center}
+\includegraphics[scale=0.3]{Figuras/robot.png}
+\caption{Chassi com a expansão e suporte de câmera em impressão 3D conectados.}
+\label{fig:markov_proc}
+\end{center}
+\end{figure}
 
+\subsection{Unidade de Controle de Motores}
+Esta unidade foi implementada para fazer o controle da velocidade angular dos motores utilizando dois controladores PID independentes. Cada controlador utilizava os dados providos pelos encoders como entrada e produziam pulsos PWM a fim de manter uma velocidade angular constante. 
 
+Neste módulo também foi implementada uma interface de comunicação com um  conjunto de nove instruções que poderiam ser recebidas através da porta serial viabilizando o funcionamento independente de outros módulos ou ser controlado por uma outra unidade que implementasse o mesmo conjunto de instruções. Neste conjunto há instruções para iniciar a comunicação, ajustar coeficientes de controle, definir os \emph{set points} de cada controlador, parada de emergência, dentre outros comandos.
+
+O ajuste dos controladores foi feito de forma empírica observando o aspecto do sinal de saída em resposta a um degrau. Primeiramente, todos os coeficientes foram zerados. Em seguida, o ganho proporcional foi incrementado até que a resposta ao degrau fosse capaz de atingir o \textit{setpoint}, com um \textit{overshoot} e pouca oscilação. 
+
+Após obter uma resposta proporcional adequada, o ganho integral foi incrementado até que o erro de regime fosse parcialmente neutralizado, garantindo que o controlador atingisse um estado estacionário muito próximo ao \textit{setpoint} definido. 
+
+Com a introdução do ganho integral, o \textit{overshoot} e as oscilações da resposta ao degrau aumentaram. Sendo assim, o ganho derivativo foi o último a ser incrementado, atenuando esses efeitos. A evolução do aspecto da resposta ao degrau do controlador PID encontra-se ilustrado na Figura~\ref{fig:adjustEvolve}.
+
+\begin{figure}
+\begin{center}
+\includegraphics[scale=0.45]{Figuras/adjustEvolve.png}
+\caption{Evolução do aspecto da resposta ao degrau do controlador PID ao longo do procedimento de ajuste.}  
+\label{fig:adjustEvolve}
+\end{center}
+\end{figure}
+
+\subsection{Unidade de Visão Computacional e Aprendizado}
+
+\subsection{Arquitetura do Final do Sistema}
+
+\section{Resultados}
+\subsection{Estudo de Caso 1: quatro estados e três ações}
+\subsection{Estudo de Caso 2: seis estados e cinco ações}
 \section{Conclusão}
 
 
